@@ -1,0 +1,29 @@
+# Smithery configuration for the Overture Maps MCP server.
+# https://smithery.ai/docs/build/project-config/smithery.yaml
+#
+# This is a local (stdio) server: Smithery installs it into the user's MCP
+# client and runs it via npx, passing their Overture Maps API key as config.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required:
+      - overtureApiKey
+    properties:
+      overtureApiKey:
+        type: string
+        title: Overture Maps API key
+        description: >-
+          Your API key from https://www.overturemapsapi.com. The public
+          DEMO-API-KEY works for light testing; the Free tier is
+          non-commercial only.
+  commandFunction: |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', '@thatapicompany/overture-maps-mcp'],
+      env: {
+        OVERTURE_API_KEY: config.overtureApiKey || 'DEMO-API-KEY'
+      }
+    })
+  exampleConfig:
+    overtureApiKey: DEMO-API-KEY
