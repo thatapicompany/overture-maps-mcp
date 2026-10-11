@@ -1,6 +1,6 @@
 {
   "name": "@thatapicompany/overture-maps-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for the Overture Maps API — query places (POIs), buildings and administrative divisions from Overture Maps data inside Claude and other LLM tools.",
   "type": "module",
   "bin": {
