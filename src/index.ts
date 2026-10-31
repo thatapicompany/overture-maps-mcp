@@ -5,10 +5,11 @@
  * Exposes a curated, LLM-optimised set of tools over the Overture Maps API
  * (https://www.overturemapsapi.com). Responses are deliberately compact —
  * summaries rather than full GeoJSON — to stay token-efficient, and the tools
- * steer toward cheap query shapes (a country or a radius, sensible limits).
+ * steer toward cheap query shapes (a lat/lng radius, sensible limits).
  *
  * Auth: set OVERTURE_API_KEY in the environment. A public DEMO-API-KEY works
- * for light testing.
+ * for light testing near a few demo cities. Country-wide place searches (a
+ * country with no lat/lng) need a paid plan.
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -19,6 +20,8 @@ const API_KEY = process.env.OVERTURE_API_KEY || process.env.API_KEY || "DEMO-API
 
 const MAX_LIMIT = 50; // keep LLM responses within a sane token budget
 const MAX_RADIUS = 25000; // API ceiling
+const IS_DEMO_KEY = API_KEY === "DEMO-API-KEY";
+const ACCOUNT_URL = "https://account.overturemapsapi.com";
 
 type Json = Record<string, any>;
 
@@ -33,13 +36,38 @@ async function apiGet(
   const res = await fetch(url, { headers: { "x-api-key": API_KEY } });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(
-      `Overture API ${res.status} for ${path}: ${body.slice(0, 300)}`,
-    );
+    let message = body.slice(0, 300);
+    try {
+      message = JSON.parse(body)?.message ?? message;
+    } catch {
+      // not JSON; keep the raw text
+    }
+    throw new ApiError(res.status, path, message);
   }
   const totalHeader = res.headers.get("Pagination-Count");
   const data = await res.json();
   return { data, total: totalHeader ? Number(totalHeader) : null };
+}
+
+class ApiError extends Error {
+  constructor(public status: number, path: string, public apiMessage: string) {
+    super(`Overture API ${status} for ${path}: ${apiMessage}`);
+  }
+}
+
+// Plan and quota refusals (403 paid-only, 429 monthly cap or rate limit, 400
+// demo-key limits) are answers the model should relay, not tool crashes.
+function safe<A extends unknown[]>(handler: (...args: A) => Promise<ReturnType<typeof text>>) {
+  return async (...args: A): Promise<ReturnType<typeof text>> => {
+    try {
+      return await handler(...args);
+    } catch (err) {
+      if (err instanceof ApiError && [400, 403, 429].includes(err.status)) {
+        return text(`The Overture Maps API declined this request (${err.status}): ${err.apiMessage}`);
+      }
+      throw err;
+    }
+  };
 }
 
 // Overture JSON and GeoJSON both appear across formats; normalise to the
@@ -82,7 +110,7 @@ const asArray = (data: any): any[] =>
 
 const server = new McpServer({
   name: "overture-maps",
-  version: "0.1.0",
+  version: "0.1.1",
 });
 
 // ---------------------------------------------------------------------------
@@ -91,13 +119,14 @@ const server = new McpServer({
 server.tool(
   "search_places",
   "Search for places (points of interest / businesses) in Overture Maps data. " +
-    "You must scope the search to keep it fast and cheap: provide either a `country` " +
-    "(ISO 3166-1 alpha-2, e.g. GB, US, FR) OR a `lat`+`lng` with a `radius`. " +
-    "Filter by `categories` (e.g. restaurant, cafe, used_car_dealer — use list_place_categories to discover valid values), " +
+    "Scope every search with a `lat`+`lng` and a `radius` (up to 25 km); geocode a named town or " +
+    "city to coordinates first. A country-wide search (`country` with no lat/lng) is only available " +
+    "on paid plans; `country` can always be added alongside lat/lng as an extra filter. " +
+    "Filter by `categories` (e.g. restaurant, cafe, bakery — use list_place_categories to discover valid values), " +
     "`brand_name` (e.g. Starbucks), or `has_contact` to only return places with a website/phone. " +
     "Returns compact summaries (name, category, location, website, phone), not full geometry.",
   {
-    country: z.string().length(2).optional().describe("ISO 3166-1 alpha-2 country code, e.g. GB, US, FR. Use this OR lat+lng."),
+    country: z.string().length(2).optional().describe("ISO 3166-1 alpha-2 country code, e.g. GB, US, FR. On its own (no lat/lng) this needs a paid plan."),
     lat: z.number().optional().describe("Latitude for a radius search. Requires lng."),
     lng: z.number().optional().describe("Longitude for a radius search. Requires lat."),
     radius: z.number().optional().describe(`Search radius in metres for a lat/lng search (default 1000, max ${MAX_RADIUS}).`),
@@ -109,10 +138,18 @@ server.tool(
     limit: z.number().optional().describe(`Number of results (default 10, max ${MAX_LIMIT}).`),
     page: z.number().optional().describe("0-indexed page number for paging through results."),
   },
-  async (args) => {
-    if (!args.country && !(args.lat != null && args.lng != null)) {
+  safe(async (args) => {
+    const hasLatLng = args.lat != null && args.lng != null;
+    if (!args.country && !hasLatLng) {
       return text(
-        "Please scope the search: provide a `country` (e.g. GB) or a `lat`+`lng` (with an optional `radius`).",
+        "Please scope the search with a `lat`+`lng` (and an optional `radius`, up to 25 km).",
+      );
+    }
+    if (!hasLatLng && IS_DEMO_KEY) {
+      return text(
+        "Country-wide searches need a paid plan, and the demo key only covers a few demo cities. " +
+          "Search by `lat`+`lng`+`radius` instead, or set OVERTURE_API_KEY to your own key " +
+          `(free or paid) from ${ACCOUNT_URL}.`,
       );
     }
     const limit = Math.min(Math.max(args.limit ?? 10, 1), MAX_LIMIT);
@@ -142,7 +179,7 @@ server.tool(
         ? ` Use page=${(args.page ?? 0) + 1} for more.`
         : "");
     return text(`${header}\n\n${JSON.stringify(rows, null, 2)}`);
-  },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -158,7 +195,7 @@ server.tool(
     lng: z.number().optional(),
     radius: z.number().optional().describe(`Radius in metres for a lat/lng area (max ${MAX_RADIUS}).`),
   },
-  async (args) => {
+  safe(async (args) => {
     if (!args.country && !(args.lat != null && args.lng != null)) {
       return text("Please provide a `country` or a `lat`+`lng`.");
     }
@@ -177,7 +214,7 @@ server.tool(
       .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
       .slice(0, 150);
     return text(`${rows.length} categories (most common first):\n\n${JSON.stringify(rows, null, 2)}`);
-  },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -188,7 +225,7 @@ server.tool(
   "List every country present in Overture Maps places data, with the number of places (and brands) in each. " +
     "Useful to check coverage before searching.",
   {},
-  async () => {
+  safe(async () => {
     const { data } = await apiGet("/places/countries", {});
     const all = asArray(data)
       .map((c: Json) => ({
@@ -201,7 +238,7 @@ server.tool(
     const rows = all.slice(0, 100);
     const note = all.length > rows.length ? ` (showing top ${rows.length} of ${all.length} by place count)` : "";
     return text(`${all.length} countries${note}:\n\n${JSON.stringify(rows, null, 2)}`);
-  },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -224,7 +261,7 @@ server.tool(
     limit: z.number().optional().describe(`Number of results (default 10, max ${MAX_LIMIT}).`),
     include_geometry: z.boolean().optional().describe("Include the boundary polygon (large). Default false."),
   },
-  async (args) => {
+  safe(async (args) => {
     if (!args.name && !args.country && !(args.lat != null && args.lng != null)) {
       return text("Please provide a `name`, a `country`, or a `lat`+`lng` to search divisions.");
     }
@@ -254,7 +291,7 @@ server.tool(
     });
     const header = `Found ${rows.length} division(s)` + (total != null ? ` of ${total} total.` : ".");
     return text(`${header}\n\n${JSON.stringify(rows, null, 2)}`);
-  },
+  }),
 );
 
 // ---------------------------------------------------------------------------
@@ -270,7 +307,7 @@ server.tool(
     radius: z.number().optional().describe(`Radius in metres (default 250, max ${MAX_RADIUS}).`),
     limit: z.number().optional().describe(`Number of results (default 10, max ${MAX_LIMIT}).`),
   },
-  async (args) => {
+  safe(async (args) => {
     const { data, total } = await apiGet("/buildings", {
       lat: args.lat,
       lng: args.lng,
@@ -290,7 +327,7 @@ server.tool(
     });
     const header = `Found ${rows.length} building(s)` + (total != null ? ` of ${total} total.` : ".");
     return text(`${header}\n\n${JSON.stringify(rows, null, 2)}`);
-  },
+  }),
 );
 
 async function main() {

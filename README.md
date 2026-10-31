@@ -8,7 +8,7 @@ This is a local (stdio) MCP server that wraps the [Overture Maps API](https://ww
 
 | Tool | What it does |
 |------|--------------|
-| `search_places` | Search POIs/businesses by country or lat/lng+radius, filtered by category, taxonomy, brand or contact details. |
+| `search_places` | Search POIs/businesses by lat/lng+radius (country-wide on paid plans), filtered by category, taxonomy, brand or contact details. |
 | `list_place_categories` | List available place categories (with counts) for a country or area — use to find valid `categories` values. |
 | `list_place_countries` | List every country in the dataset with place/brand counts. |
 | `search_divisions` | Look up administrative divisions (countries, regions, counties, localities) by name or location. |
@@ -16,7 +16,7 @@ This is a local (stdio) MCP server that wraps the [Overture Maps API](https://ww
 
 ## Get an API key
 
-Sign up at [overturemapsapi.com](https://www.overturemapsapi.com) for a free API key. The public `DEMO-API-KEY` also works for light testing. Set it as `OVERTURE_API_KEY`.
+Sign up at [account.overturemapsapi.com](https://account.overturemapsapi.com) for a free API key and set it as `OVERTURE_API_KEY`. The public `DEMO-API-KEY` works for light testing near a few demo cities (New York, London, Paris, Bondi Beach). Country-wide place searches (a country with no lat/lng) need a paid plan.
 
 > Note: the Free tier is for non-commercial use. Commercial use needs a paid plan.
 
