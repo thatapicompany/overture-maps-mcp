@@ -14,6 +14,8 @@ This is a local (stdio) MCP server that wraps the [Overture Maps API](https://ww
 | `search_divisions` | Look up administrative divisions (countries, regions, counties, localities) by name or location. |
 | `find_buildings` | Find building footprints near a point (id, distance, height/levels). |
 
+Every tool is read-only: each declares `readOnlyHint`, `destructiveHint: false`, `idempotentHint` and `openWorldHint`, so clients can call them without a confirmation step.
+
 ## Get an API key
 
 Sign up at [account.overturemapsapi.com](https://account.overturemapsapi.com) for a free API key and set it as `OVERTURE_API_KEY`. The public `DEMO-API-KEY` works for light testing near a few demo cities (New York, London, Paris, Bondi Beach). Country-wide place searches (a country with no lat/lng) need a paid plan.
@@ -54,6 +56,7 @@ Any client that supports local stdio MCP servers works the same way — run `npx
 ```bash
 npm install
 npm run build
+npm test
 OVERTURE_API_KEY=your-key node dist/index.js
 ```
 
@@ -66,4 +69,4 @@ OVERTURE_API_KEY=your-key node dist/index.js
 
 ## License
 
-MIT
+[MIT](./LICENSE)
