@@ -117,7 +117,7 @@ const READ_ONLY = {
 
 export const server = new McpServer({
   name: "overture-maps",
-  version: "0.1.2",
+  version: "0.1.3",
 });
 
 // ---------------------------------------------------------------------------
