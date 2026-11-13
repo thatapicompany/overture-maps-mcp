@@ -1,9 +1,12 @@
 # Publishes to npm when a GitHub release is published, using npm trusted
-# publishing (OIDC). No npm token is stored in the repo or its secrets.
+# publishing (OIDC), then lists that version in the official MCP Registry
+# (registry.modelcontextprotocol.io) using GitHub OIDC. No npm token or
+# registry credential is stored in the repo or its secrets.
 #
 # To release: bump "version" in package.json, merge to main, then publish a
-# GitHub release with the tag v<version> (e.g. v0.1.3).
-name: Publish to npm
+# GitHub release with the tag v<version> (e.g. v0.1.5). Re-running a failed
+# run is safe: the npm step skips a version that is already published.
+name: Publish to npm and the MCP Registry
 
 on:
   release:
@@ -36,4 +39,32 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: npm publish --access public
+      - name: Publish to npm
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already on npm, skipping."
+          else
+            npm publish --access public
+          fi
+
+      - name: Sync server.json versions with package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          jq --arg v "$version" '.version = $v | .packages[0].version = $v' server.json > server.tmp && mv server.tmp server.json
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Publish to the MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          # The registry checks mcpName on the npm package, which can take a
+          # moment to appear after publishing, so retry briefly.
+          for attempt in 1 2 3 4 5; do
+            if ./mcp-publisher publish; then exit 0; fi
+            echo "Attempt $attempt failed, retrying in 30s..."; sleep 30
+          done
+          exit 1

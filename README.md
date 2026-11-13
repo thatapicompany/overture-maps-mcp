@@ -62,7 +62,7 @@ OVERTURE_API_KEY=your-key node dist/index.js
 
 ## Releasing
 
-Releases publish to npm from GitHub Actions with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is needed. Bump `version` in `package.json`, merge to `main`, then publish a GitHub release tagged `v<version>` (for example `v0.1.3`). The workflow checks the tag matches, builds, runs the tests and publishes with provenance.
+Releases publish to npm from GitHub Actions with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is needed, and then list the same version in the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.thatapicompany/overture-maps-mcp` (GitHub OIDC, no secret needed; metadata in `server.json`). Bump `version` in `package.json`, merge to `main`, then publish a GitHub release tagged `v<version>` (for example `v0.1.3`). The workflow checks the tag matches, builds, runs the tests and publishes with provenance.
 
 ## Environment variables
 
