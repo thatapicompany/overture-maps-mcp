@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.thatapicompany/overture-maps-mcp",
+  "title": "Overture Maps",
+  "description": "Overture Maps places (POIs), buildings and administrative boundaries, via the Overture Maps API.",
+  "websiteUrl": "https://www.overturemapsapi.com/docs/use-with-ai-tools",
+  "repository": {
+    "url": "https://github.com/thatapicompany/overture-maps-mcp",
+    "source": "github"
+  },
+  "version": "0.1.5",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@thatapicompany/overture-maps-mcp",
+      "version": "0.1.5",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OVERTURE_API_KEY",
+          "description": "Your Overture Maps API key from https://account.overturemapsapi.com. Defaults to the public demo key.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
