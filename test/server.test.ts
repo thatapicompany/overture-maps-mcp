@@ -2,7 +2,7 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { compactPlace, server } from "../src/server.js";
+import { compactPlace, server, USER_AGENT } from "../src/server.js";
 
 // Every test stubs fetch, so nothing here reaches the real API.
 type Call = { url: URL; headers: Record<string, string> };
@@ -108,6 +108,8 @@ describe("search_places", () => {
     assert.equal(url.searchParams.get("limit"), "50");
     assert.equal(url.searchParams.get("categories"), "cafe");
     assert.equal(headers["x-api-key"], "DEMO-API-KEY");
+    assert.equal(headers["user-agent"], USER_AGENT);
+    assert.match(USER_AGENT, /^overture-maps-mcp\/\d+\.\d+\.\d+ \(node\/[\d.]+\)$/);
     const text = textOf(result);
     assert.match(text, /Found 1 place\(s\)/);
     assert.match(text, /3 total match/);

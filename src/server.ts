@@ -10,8 +10,19 @@
  * for light testing near a few demo cities. Country-wide place searches (a
  * country with no lat/lng) need a paid plan.
  */
+import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+
+// package.json ships with the npm package and sits one level above both src/
+// and dist/, so this resolves in tests and in the published build alike.
+const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("../package.json") as {
+  version: string;
+};
+
+// Identifies MCP traffic in the API's usage logs, so we can see which clients
+// people use. Format follows RFC 9110: product/version (comment).
+export const USER_AGENT = `overture-maps-mcp/${PACKAGE_VERSION} (node/${process.versions.node})`;
 
 export const API_BASE = process.env.OVERTURE_API_BASE || "https://api.overturemapsapi.com";
 const API_KEY = process.env.OVERTURE_API_KEY || process.env.API_KEY || "DEMO-API-KEY";
@@ -31,7 +42,7 @@ async function apiGet(
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
   }
-  const res = await fetch(url, { headers: { "x-api-key": API_KEY } });
+  const res = await fetch(url, { headers: { "x-api-key": API_KEY, "user-agent": USER_AGENT } });
   if (!res.ok) {
     const body = await res.text();
     let message = body.slice(0, 300);
@@ -117,7 +128,7 @@ const READ_ONLY = {
 
 export const server = new McpServer({
   name: "overture-maps",
-  version: "0.1.3",
+  version: PACKAGE_VERSION,
 });
 
 // ---------------------------------------------------------------------------
