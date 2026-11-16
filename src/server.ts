@@ -30,7 +30,7 @@ const API_KEY = process.env.OVERTURE_API_KEY || process.env.API_KEY || "DEMO-API
 const MAX_LIMIT = 50; // keep LLM responses within a sane token budget
 const MAX_RADIUS = 25000; // API ceiling
 const IS_DEMO_KEY = API_KEY === "DEMO-API-KEY";
-const ACCOUNT_URL = "https://account.overturemapsapi.com";
+const ACCOUNT_URL = "https://app.overturemapsapi.com";
 
 type Json = Record<string, any>;
 
