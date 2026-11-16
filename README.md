@@ -18,7 +18,7 @@ Every tool is read-only: each declares `readOnlyHint`, `destructiveHint: false`,
 
 ## Get an API key
 
-Sign up at [account.overturemapsapi.com](https://account.overturemapsapi.com) for a free API key and set it as `OVERTURE_API_KEY`. The public `DEMO-API-KEY` works for light testing near a few demo cities (New York, London, Paris, Bondi Beach). Country-wide place searches (a country with no lat/lng) need a paid plan.
+Sign up at [app.overturemapsapi.com](https://app.overturemapsapi.com) for a free API key and set it as `OVERTURE_API_KEY`. The public `DEMO-API-KEY` works for light testing near a few demo cities (New York, London, Paris, Bondi Beach). Country-wide place searches (a country with no lat/lng) need a paid plan.
 
 > Note: the Free tier is for non-commercial use. Commercial use needs a paid plan.
 

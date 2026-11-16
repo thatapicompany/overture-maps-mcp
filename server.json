@@ -20,7 +20,7 @@
       "environmentVariables": [
         {
           "name": "OVERTURE_API_KEY",
-          "description": "Your Overture Maps API key from https://account.overturemapsapi.com. Defaults to the public demo key.",
+          "description": "Your Overture Maps API key from https://app.overturemapsapi.com. Defaults to the public demo key.",
           "isRequired": false,
           "isSecret": true,
           "format": "string"
