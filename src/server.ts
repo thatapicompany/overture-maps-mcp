@@ -25,16 +25,18 @@ const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("../package.
 export const USER_AGENT = `overture-maps-mcp/${PACKAGE_VERSION} (node/${process.versions.node})`;
 
 export const API_BASE = process.env.OVERTURE_API_BASE || "https://api.overturemapsapi.com";
-const API_KEY = process.env.OVERTURE_API_KEY || process.env.API_KEY || "DEMO-API-KEY";
+export const DEMO_KEY = "DEMO-API-KEY";
+const ENV_API_KEY = process.env.OVERTURE_API_KEY || process.env.API_KEY || DEMO_KEY;
 
 const MAX_LIMIT = 50; // keep LLM responses within a sane token budget
 const MAX_RADIUS = 25000; // API ceiling
-const IS_DEMO_KEY = API_KEY === "DEMO-API-KEY";
 const ACCOUNT_URL = "https://app.overturemapsapi.com";
 
 type Json = Record<string, any>;
 
-async function apiGet(
+async function apiGetAs(
+  apiKey: string,
+  userAgent: string,
   path: string,
   params: Record<string, string | number | boolean | undefined>,
 ): Promise<{ data: any; total: number | null }> {
@@ -42,7 +44,7 @@ async function apiGet(
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
   }
-  const res = await fetch(url, { headers: { "x-api-key": API_KEY, "user-agent": USER_AGENT } });
+  const res = await fetch(url, { headers: { "x-api-key": apiKey, "user-agent": userAgent } });
   if (!res.ok) {
     const body = await res.text();
     let message = body.slice(0, 300);
@@ -126,7 +128,25 @@ const READ_ONLY = {
   openWorldHint: true,
 } as const;
 
-export const server = new McpServer({
+export interface ServerOptions {
+  /** The caller's Overture Maps API key. Defaults to the environment's, then the demo key. */
+  apiKey?: string;
+  /** Sent to the API as the User-Agent, so local and hosted use can be told apart. */
+  userAgent?: string;
+}
+
+/**
+ * Builds a server whose tools call the API with one key. The local (stdio)
+ * entry point builds one from the environment. The hosted entry point builds
+ * one per request, with the key that request carried.
+ */
+export function createServer(options: ServerOptions = {}): McpServer {
+const API_KEY = options.apiKey || ENV_API_KEY;
+const IS_DEMO_KEY = API_KEY === DEMO_KEY;
+const apiGet = (path: string, params: Record<string, string | number | boolean | undefined>) =>
+  apiGetAs(API_KEY, options.userAgent ?? USER_AGENT, path, params);
+
+const server = new McpServer({
   name: "overture-maps",
   version: PACKAGE_VERSION,
 });
@@ -352,3 +372,9 @@ server.tool(
     return text(`${header}\n\n${JSON.stringify(rows, null, 2)}`);
   }),
 );
+
+return server;
+}
+
+/** The server for local (stdio) use, with the key from the environment. */
+export const server = createServer();

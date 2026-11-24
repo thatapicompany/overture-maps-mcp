@@ -51,6 +51,18 @@ Restart Claude Desktop. You can then ask things like:
 
 Any client that supports local stdio MCP servers works the same way — run `npx -y @thatapicompany/overture-maps-mcp` with `OVERTURE_API_KEY` in the environment.
 
+## Hosted server (Streamable HTTP)
+
+The same tools are served over HTTP for clients that connect to a remote MCP server and cannot run `npx`. `src/http.ts` answers `POST /mcp`. Each caller sends their own Overture Maps API key as `Authorization: Bearer <key>`, as an `x-api-key` header, or as `/mcp?api_key=<key>` for clients that only take a URL. With no key, the public demo key is used. The server keeps nothing between requests.
+
+Run it yourself:
+
+```bash
+npm run build && PORT=8080 npm run start:http
+# or
+docker build -t overture-maps-mcp . && docker run -p 8080:8080 overture-maps-mcp
+```
+
 ## Local development
 
 ```bash
