@@ -8,12 +8,12 @@
     "url": "https://github.com/thatapicompany/overture-maps-mcp",
     "source": "github"
   },
-  "version": "0.1.5",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@thatapicompany/overture-maps-mcp",
-      "version": "0.1.5",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
