@@ -87,6 +87,30 @@ describe("compactPlace", () => {
     });
   });
 
+  it("passes through short ext_ fields without the prefix", () => {
+    const row = compactPlace({
+      properties: {
+        id: "x",
+        ext_distance: 12.4,
+        ext_name: "Example",
+        ext_opening_hours: "Mo-Sa 09:00-20:00; Su 11:00-17:00",
+        ext_sample_flag: true,
+        ext_sample_count: 3,
+        ext_brand: { label: "Example" },
+        ext_long: "x".repeat(301),
+        ext_empty: "",
+      },
+    });
+    assert.equal(row.opening_hours, "Mo-Sa 09:00-20:00; Su 11:00-17:00");
+    assert.equal(row.sample_flag, true);
+    assert.equal(row.sample_count, 3);
+    assert.equal(row.distance_m, 12);
+    for (const key of ["distance", "name_ext", "brand", "long", "empty", "ext_opening_hours"]) {
+      assert.ok(!(key in row), `${key} is not passed through`);
+    }
+    assert.equal(row.name, null);
+  });
+
   it("returns nulls rather than throwing on a sparse record", () => {
     const row = compactPlace({ properties: { id: "x" } });
     assert.equal(row.id, "x");

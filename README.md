@@ -8,7 +8,7 @@ This is a local (stdio) MCP server that wraps the [Overture Maps API](https://ww
 
 | Tool | What it does |
 |------|--------------|
-| `search_places` | Search POIs/businesses by lat/lng+radius (country-wide on paid plans), filtered by category, taxonomy, brand or contact details. |
+| `search_places` | Search POIs/businesses by lat/lng+radius (country-wide on paid plans), filtered by category, taxonomy, brand or contact details. Results include `opening_hours` where known (mostly chains). |
 | `list_place_categories` | List available place categories (with counts) for a country or area — use to find valid `categories` values. |
 | `list_place_countries` | List every country in the dataset with place/brand counts. |
 | `search_divisions` | Look up administrative divisions (countries, regions, counties, localities) by name or location. |
