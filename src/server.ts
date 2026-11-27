@@ -112,7 +112,29 @@ export function compactPlace(item: Json): Json {
     lat: lat ?? null,
     lng: lng ?? null,
     ...(p.ext_distance != null ? { distance_m: Math.round(p.ext_distance) } : {}),
+    ...extraFields(p),
   };
+}
+
+// The API adds fields of its own to Overture's, all prefixed `ext_` (opening
+// hours, for example). Short text, number and boolean values are passed
+// through under the same name minus the prefix, so new fields reach the model
+// without a release here. Objects and long strings are left out to keep
+// summaries compact.
+const EXTRA_HANDLED = new Set(["ext_distance", "ext_name"]);
+const EXTRA_MAX_LENGTH = 300;
+
+export function extraFields(p: Json): Json {
+  const out: Json = {};
+  for (const [key, value] of Object.entries(p ?? {})) {
+    if (!key.startsWith("ext_") || EXTRA_HANDLED.has(key)) continue;
+    const ok =
+      (typeof value === "string" && value.length > 0 && value.length <= EXTRA_MAX_LENGTH) ||
+      typeof value === "number" ||
+      typeof value === "boolean";
+    if (ok) out[key.slice(4)] = value;
+  }
+  return out;
 }
 
 const text = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
@@ -162,7 +184,9 @@ server.tool(
     "on paid plans; `country` can always be added alongside lat/lng as an extra filter. " +
     "Filter by `categories` (e.g. restaurant, cafe, bakery — use list_place_categories to discover valid values), " +
     "`brand_name` (e.g. Starbucks), or `has_contact` to only return places with a website/phone. " +
-    "Returns compact summaries (name, category, location, website, phone), not full geometry.",
+    "Returns compact summaries (name, category, location, website, phone), not full geometry. " +
+    "Some places, mostly branches of chains, also carry `opening_hours` in OpenStreetMap opening hours " +
+    "syntax (e.g. 'Mo-Sa 09:00-20:00; Su 11:00-17:00'); when it is absent the hours are unknown, not closed.",
   {
     country: z.string().length(2).optional().describe("ISO 3166-1 alpha-2 country code, e.g. GB, US, FR. On its own (no lat/lng) this needs a paid plan."),
     lat: z.number().optional().describe("Latitude for a radius search. Requires lng."),
